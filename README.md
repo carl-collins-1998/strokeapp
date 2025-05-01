@@ -1,0 +1,2 @@
+# strokeapp
+djangoapp
