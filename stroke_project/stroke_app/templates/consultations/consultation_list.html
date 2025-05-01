@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+
+{% block title %}Consultations - Mobile Stroke Unit{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2><i class="fas fa-stethoscope me-2"></i>Consultations</h2>
+    </div>
+    <div class="col-md-6 text-md-end">
+        {% if user_role == 'technician' %}
+            <!-- Only technicians can create new consultations -->
+            <a href="{% url 'patient_list' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Request New Consultation
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-light">
+        {% if user_role == 'neurologist' %}
+            <ul class="nav nav-tabs card-header-tabs" id="consultationTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button" role="tab">
+                        Pending Consultations
+                        <span class="badge bg-warning ms-1">{{ pending_count }}</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" type="button" role="tab">
+                        Completed Consultations
+                    </button>
+                </li>
+            </ul>
+        {% else %}
+            <h5 class="mb-0">My Consultations</h5>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if user_role == 'neurologist' %}
+            <div class="tab-content" id="consultationTabsContent">
+                <!-- Pending Consultations Tab for Neurologists -->
+                <div class="tab-pane fade show active" id="pending" role="tabpanel" aria-labelledby="pending-tab">
+                    {% if pending_consultations %}
+                        <div class="list-group">
+                            {% for consultation in pending_consultations %}
+                                <a href="{% url 'consultation_detail' consultation.pk %}" class="list-group-item list-group-item-action">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-1">
+                                            <span class="badge {% if consultation.status == 'requested' %}bg-warning{% else %}bg-info{% endif %}">
+                                                {{ consultation.get_status_display }}
+                                            </span>
+                                            {{ consultation.patient.first_name }} {{ consultation.patient.last_name }}
+                                        </h6>
+                                        <small>Requested: {{ consultation.requested_at|date:"M d, Y H:i" }}</small>
+                                    </div>
+                                    <p class="mb-1">{{ consultation.chief_complaint|truncatechars:150 }}</p>
+                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                        <small>
+                                            <strong>Requested by:</strong> {{ consultation.requested_by.get_full_name|default:consultation.requested_by.username }}
+                                        </small>
+                                        {% if consultation.status == 'requested' %}
+                                            <a href="{% url 'consultation_accept' consultation.pk %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-check me-1"></i>Accept
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center p-4">
+                            <p class="mb-0"><i class="fas fa-check-circle text-success me-2"></i>No pending consultations at this time.</p>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Completed Consultations Tab for Neurologists -->
+                <div class="tab-pane fade" id="completed" role="tabpanel" aria-labelledby="completed-tab">
+                    {% if completed_consultations %}
+                        <div class="list-group">
+                            {% for consultation in completed_consultations %}
+                                <a href="{% url 'consultation_detail' consultation.pk %}" class="list-group-item list-group-item-action">
+                                    <div class="d-flex justify-content-between">
+                                        <h6 class="mb-1">
+                                            <span class="badge bg-success">Completed</span>
+                                            {{ consultation.patient.first_name }} {{ consultation.patient.last_name }}
+                                            {% if consultation.tpa_recommended %}
+                                                <span class="badge bg-danger ms-1">tPA Recommended</span>
+                                            {% endif %}
+                                        </h6>
+                                        <small>Completed: {{ consultation.completed_at|date:"M d, Y H:i" }}</small>
+                                    </div>
+                                    <p class="mb-1">{{ consultation.get_diagnosis_display }}</p>
+                                    <small>
+                                        <strong>Patient:</strong> {{ consultation.patient.first_name }} {{ consultation.patient.last_name }}
+                                    </small>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center p-4">
+                            <p class="text-muted">No completed consultations found.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <!-- Regular consultation list for technicians and admins -->
+            <ul class="nav nav-tabs" id="myTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" 
+                            type="button" role="tab" aria-controls="pending" aria-selected="true">Pending</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed" 
+                            type="button" role="tab" aria-controls="completed" aria-selected="false">Completed</button>
+                </li>
+            </ul>
+            <div class="tab-content pt-3" id="myTabContent">
+                <div class="tab-pane fade show active" id="pending" role="tabpanel" aria-labelledby="pending-tab">
+                    {% if pending_consultations %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Status</th>
+                                        <th>Requested</th>
+                                        <th>Neurologist</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for consultation in pending_consultations %}
+                                        <tr>
+                                            <td>{{ consultation.patient.first_name }} {{ consultation.patient.last_name }}</td>
+                                            <td>
+                                                <span class="badge {% if consultation.status == 'requested' %}bg-warning{% elif consultation.status == 'in_progress' %}bg-info{% else %}bg-secondary{% endif %}">
+                                                    {{ consultation.get_status_display }}
+                                                </span>
+                                            </td>
+                                            <td>{{ consultation.requested_at|date:"M d, Y H:i" }}</td>
+                                            <td>
+                                                {% if consultation.neurologist %}
+                                                    {{ consultation.neurologist.get_full_name|default:consultation.neurologist.username }}
+                                                {% else %}
+                                                    Pending assignment
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'consultation_detail' consultation.pk %}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye"></i> View
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center p-4">
+                            <p class="text-muted">No pending consultations found.</p>
+                            {% if user_role == 'technician' %}
+                                <a href="{% url 'patient_list' %}" class="btn btn-primary">
+                                    <i class="fas fa-plus me-1"></i>Request New Consultation
+                                </a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="tab-pane fade" id="completed" role="tabpanel" aria-labelledby="completed-tab">
+                    {% if completed_consultations %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Completed</th>
+                                        <th>Neurologist</th>
+                                        <th>Diagnosis</th>
+                                        <th>tPA</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for consultation in completed_consultations %}
+                                        <tr>
+                                            <td>{{ consultation.patient.first_name }} {{ consultation.patient.last_name }}</td>
+                                            <td>{{ consultation.completed_at|date:"M d, Y H:i" }}</td>
+                                            <td>{{ consultation.neurologist.get_full_name|default:consultation.neurologist.username }}</td>
+                                            <td>{{ consultation.get_diagnosis_display }}</td>
+                                            <td>
+                                                {% if consultation.tpa_recommended %}
+                                                    <span class="badge bg-danger">Recommended</span>
+                                                    {% if consultation.tpa_administered %}
+                                                        <span class="badge bg-success">Administered</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="badge bg-secondary">Not recommended</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'consultation_detail' consultation.pk %}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye"></i> View
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center p-4">
+                            <p class="text-muted">No completed consultations found.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

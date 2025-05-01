@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Complete Consultation - Mobile Stroke Unit{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-clipboard-check me-2"></i>Complete Consultation</h2>
+        <p class="text-muted">Patient: {{ consultation.patient.first_name }} {{ consultation.patient.last_name }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Consultation Findings</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="d-flex justify-content-end mt-3">
+                        <a href="{% url 'consultation_detail' consultation.pk %}" class="btn btn-secondary me-2">Cancel</a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-clipboard-check me-2"></i>Complete Consultation
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-user me-2"></i>Patient Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Name:</strong> {{ consultation.patient.first_name }} {{ consultation.patient.last_name }}
+                </div>
+                <div class="mb-3">
+                    <strong>Age:</strong> {{ consultation.patient.age }} years
+                </div>
+                <div class="mb-3">
+                    <strong>Gender:</strong> {{ consultation.patient.get_gender_display }}
+                </div>
+                {% if consultation.patient.medical_history %}
+                    <div>
+                        <strong>Medical History:</strong>
+                        <p class="mt-2">{{ consultation.patient.medical_history|linebreaks }}</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card shadow-sm">
+            <div class="card-header {% if meets_tpa_criteria %}bg-success{% else %}bg-danger{% endif %} text-white">
+                <h5 class="mb-0"><i class="fas fa-syringe me-2"></i>tPA Eligibility</h5>
+            </div>
+            <div class="card-body">
+                {% if meets_tpa_criteria %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>This patient meets criteria for tPA administration.
+                    </div>
+                {% else %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>This patient does not meet criteria for tPA administration.
+                        {% if exclusion_reasons %}
+                            <ul class="mt-2 mb-0">
+                                {% for reason in exclusion_reasons %}
+                                    <li>{{ reason }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

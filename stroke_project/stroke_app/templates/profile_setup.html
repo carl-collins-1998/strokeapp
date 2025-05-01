@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile Setup - Mobile Stroke Unit{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-user-cog me-2"></i>Complete Your Profile</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        You need to complete your profile setup before accessing the system.
+                    </div>
+                    
+                    <form method="POST" action="{% url 'profile_setup' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="role" class="form-label">Select Your Role</label>
+                            <select name="role" id="role" class="form-select" required>
+                                <option value="">-- Select Role --</option>
+                                <option value="technician">Mobile Stroke Technician</option>
+                                <option value="neurologist">Remote Neurologist</option>
+                                <option value="admin">Administrator</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Phone Number</label>
+                            <input type="text" name="phone" id="phone" class="form-control" placeholder="Enter your phone number">
+                        </div>
+                        
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Profile
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

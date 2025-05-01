@@ -1,0 +1,387 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ patient.first_name }} {{ patient.last_name }} - Mobile Stroke Unit{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2>{{ patient.first_name }} {{ patient.last_name }}</h2>
+        <p class="text-muted">{{ patient.age }} years old, {{ patient.get_gender_display }}</p>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <a href="{% url 'patient_edit' patient.pk %}" class="btn btn-outline-primary me-2">
+            <i class="fas fa-edit me-1"></i>Edit Patient
+        </a>
+        <div class="btn-group">
+            <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-plus me-1"></i>Add Data
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{% url 'vitals_create' patient.pk %}">
+                    <i class="fas fa-heartbeat me-2"></i>Vital Signs
+                </a></li>
+                <li><a class="dropdown-item" href="{% url 'lab_results_create' patient.pk %}">
+                    <i class="fas fa-flask me-2"></i>Lab Results
+                </a></li>
+                <li><a class="dropdown-item" href="{% url 'imaging_study_create' patient.pk %}">
+                    <i class="fas fa-x-ray me-2"></i>Imaging Study
+                </a></li>
+                <li><a class="dropdown-item" href="{% url 'nihss_assessment_create' patient.pk %}">
+                    <i class="fas fa-clipboard-list me-2"></i>NIHSS Assessment
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{% url 'consultation_request' patient.pk %}">
+                    <i class="fas fa-stethoscope me-2"></i>Request Consultation
+                </a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Patient Info -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-user me-2"></i>Patient Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Name:</strong> {{ patient.first_name }} {{ patient.last_name }}
+                </div>
+                <div class="mb-3">
+                    <strong>Age:</strong> {{ patient.age }} years
+                </div>
+                <div class="mb-3">
+                    <strong>Gender:</strong> {{ patient.get_gender_display }}
+                </div>
+                <div class="mb-3">
+                    <strong>Created:</strong> {{ patient.created_at|date:"M d, Y H:i" }}
+                </div>
+                <div class="mb-3">
+                    <strong>Created By:</strong> {{ patient.created_by.get_full_name|default:patient.created_by.username }}
+                </div>
+                {% if patient.medical_history %}
+                    <div>
+                        <strong>Medical History:</strong>
+                        <p class="mt-2">{{ patient.medical_history|linebreaks }}</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Latest Vitals -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-heartbeat me-2"></i>Vital Signs</h5>
+                <a href="{% url 'vitals_create' patient.pk %}" class="btn btn-sm btn-light">
+                    <i class="fas fa-plus"></i>
+                </a>
+            </div>
+            <div class="card-body">
+                {% if latest_vitals %}
+                    <div class="mb-3">
+                        <strong>Blood Pressure:</strong> {{ latest_vitals.systolic_bp }}/{{ latest_vitals.diastolic_bp }} mmHg
+                    </div>
+                    <div class="mb-3">
+                        <strong>Heart Rate:</strong> {{ latest_vitals.heart_rate }} bpm
+                    </div>
+                    <div class="mb-3">
+                        <strong>Respiratory Rate:</strong> {{ latest_vitals.respiratory_rate }} breaths/min
+                    </div>
+                    <div class="mb-3">
+                        <strong>Temperature:</strong> {{ latest_vitals.temperature }} °F
+                    </div>
+                    <div class="mb-3">
+                        <strong>Oxygen Saturation:</strong> {{ latest_vitals.oxygen_saturation }}%
+                    </div>
+                    {% if latest_vitals.glucose %}
+                        <div class="mb-3">
+                            <strong>Glucose:</strong> {{ latest_vitals.glucose }} mg/dL
+                        </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <small class="text-muted">Recorded: {{ latest_vitals.timestamp|date:"M d, Y H:i" }}</small>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No vital signs recorded yet.</p>
+                    <a href="{% url 'vitals_create' patient.pk %}" class="btn btn-sm btn-outline-success">
+                        <i class="fas fa-plus me-1"></i>Record Vital Signs
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Latest Labs/NIHSS -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>NIHSS Assessment</h5>
+            </div>
+            <div class="card-body">
+                {% if latest_nihss %}
+                    <div class="text-center mb-3">
+                        <h1 class="display-4">{{ latest_nihss.total_score }}</h1>
+                        <p class="text-muted">Total NIHSS Score</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Assessment Time:</strong> {{ latest_nihss.timestamp|date:"M d, Y H:i" }}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Assessed By:</strong> {{ latest_nihss.assessed_by.get_full_name|default:latest_nihss.assessed_by.username }}
+                    </div>
+                    
+                    <a href="{% url 'nihss_assessment_create' patient.pk %}" class="btn btn-sm btn-outline-info">
+                        <i class="fas fa-plus me-1"></i>New Assessment
+                    </a>
+                {% else %}
+                    <p class="text-muted">No NIHSS assessment recorded yet.</p>
+                    <a href="{% url 'nihss_assessment_create' patient.pk %}" class="btn btn-outline-info">
+                        <i class="fas fa-plus me-1"></i>Record NIHSS Assessment
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs for all data -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-light p-0">
+        <ul class="nav nav-tabs" id="patientDataTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="vitals-tab" data-bs-toggle="tab" data-bs-target="#vitals" type="button" role="tab">
+                    <i class="fas fa-heartbeat me-1"></i>Vital Signs
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="labs-tab" data-bs-toggle="tab" data-bs-target="#labs" type="button" role="tab">
+                    <i class="fas fa-flask me-1"></i>Lab Results
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="imaging-tab" data-bs-toggle="tab" data-bs-target="#imaging" type="button" role="tab">
+                    <i class="fas fa-x-ray me-1"></i>Imaging
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="nihss-tab" data-bs-toggle="tab" data-bs-target="#nihss" type="button" role="tab">
+                    <i class="fas fa-clipboard-list me-1"></i>NIHSS
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="consultations-tab" data-bs-toggle="tab" data-bs-target="#consultations" type="button" role="tab">
+                    <i class="fas fa-stethoscope me-1"></i>Consultations
+                </button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body">
+        <div class="tab-content" id="patientDataTabsContent">
+            <!-- Vital Signs Tab -->
+            <div class="tab-pane fade show active" id="vitals" role="tabpanel" aria-labelledby="vitals-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>Vital Signs History</h5>
+                    <a href="{% url 'vitals_create' patient.pk %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i>Add Vitals
+                    </a>
+                </div>
+                
+                {% if vitals %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Time</th>
+                                    <th>BP (mmHg)</th>
+                                    <th>HR (bpm)</th>
+                                    <th>RR (br/min)</th>
+                                    <th>Temp (°F)</th>
+                                    <th>O2 (%)</th>
+                                    <th>Glucose</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for vital in vitals %}
+                                    <tr>
+                                        <td>{{ vital.timestamp|date:"M d, Y H:i" }}</td>
+                                        <td>{{ vital.systolic_bp }}/{{ vital.diastolic_bp }}</td>
+                                        <td>{{ vital.heart_rate }}</td>
+                                        <td>{{ vital.respiratory_rate }}</td>
+                                        <td>{{ vital.temperature }}</td>
+                                        <td>{{ vital.oxygen_saturation }}%</td>
+                                        <td>{% if vital.glucose %}{{ vital.glucose }} mg/dL{% else %}-{% endif %}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No vital signs recorded yet.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Lab Results Tab -->
+            <div class="tab-pane fade" id="labs" role="tabpanel" aria-labelledby="labs-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>Lab Results History</h5>
+                    <a href="{% url 'lab_results_create' patient.pk %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i>Add Lab Results
+                    </a>
+                </div>
+                
+                {% if lab_results %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Time</th>
+                                    <th>CBC</th>
+                                    <th>BMP</th>
+                                    <th>Glucose</th>
+                                    <th>Coagulation</th>
+                                    <th>INR</th>
+                                    <th>Platelets</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for lab in lab_results %}
+                                    <tr>
+                                        <td>{{ lab.timestamp|date:"M d, Y H:i" }}</td>
+                                        <td>{{ lab.cbc_normal|yesno:"Normal,Abnormal" }}</td>
+                                        <td>{{ lab.bmp_normal|yesno:"Normal,Abnormal" }}</td>
+                                        <td>{% if lab.glucose_level %}{{ lab.glucose_level }} mg/dL{% else %}-{% endif %}</td>
+                                        <td>{{ lab.coagulation_normal|yesno:"Normal,Abnormal" }}</td>
+                                        <td>{% if lab.inr_value %}{{ lab.inr_value }}{% else %}-{% endif %}</td>
+                                        <td>{% if lab.platelet_count %}{{ lab.platelet_count }}{% else %}-{% endif %}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No lab results recorded yet.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Imaging Tab -->
+            <div class="tab-pane fade" id="imaging" role="tabpanel" aria-labelledby="imaging-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>Imaging Studies</h5>
+                    <a href="{% url 'imaging_study_create' patient.pk %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i>Add Imaging Study
+                    </a>
+                </div>
+                
+                {% if imaging_studies %}
+                    <div class="row">
+                        {% for study in imaging_studies %}
+                            <div class="col-md-6 mb-4">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">
+                                            {{ study.get_study_type_display }}
+                                            <span class="badge {% if study.result == 'hemorrhagic' %}bg-danger{% elif study.result == 'ischemic' %}bg-warning{% else %}bg-info{% endif %}">
+                                                {{ study.get_result_display }}
+                                            </span>
+                                        </h6>
+                                        <small class="text-muted">{{ study.timestamp|date:"M d, Y H:i" }}</small>
+                                    </div>
+                                    <div class="card-body">
+                                        <p>{{ study.description }}</p>
+                                        {% if study.image_file %}
+                                            <img src="{{ study.image_file.url }}" class="img-fluid" alt="Imaging study">
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No imaging studies recorded yet.</p>
+                {% endif %}
+            </div>
+            
+            <!-- NIHSS Tab -->
+            <div class="tab-pane fade" id="nihss" role="tabpanel" aria-labelledby="nihss-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>NIHSS Assessments</h5>
+                    <a href="{% url 'nihss_assessment_create' patient.pk %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i>Add NIHSS Assessment
+                    </a>
+                </div>
+                
+                {% if nihss_assessments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Total Score</th>
+                                    <th>Assessed By</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for assessment in nihss_assessments %}
+                                    <tr>
+                                        <td>{{ assessment.timestamp|date:"M d, Y H:i" }}</td>
+                                        <td><strong>{{ assessment.total_score }}</strong></td>
+                                        <td>{{ assessment.assessed_by.get_full_name|default:assessment.assessed_by.username }}</td>
+                                        <td>{{ assessment.notes|default:"-"|truncatechars:50 }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No NIHSS assessments recorded yet.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Consultations Tab -->
+            <div class="tab-pane fade" id="consultations" role="tabpanel" aria-labelledby="consultations-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>Consultations</h5>
+                    <a href="{% url 'consultation_request' patient.pk %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i>Request Consultation
+                    </a>
+                </div>
+                
+                {% if consultations %}
+                    <div class="list-group">
+                        {% for consultation in consultations %}
+                            <a href="{% url 'consultation_detail' consultation.pk %}" class="list-group-item list-group-item-action">
+                                <div class="d-flex justify-content-between">
+                                    <h6 class="mb-1">
+                                        <span class="badge {% if consultation.status == 'requested' %}bg-warning{% elif consultation.status == 'in_progress' %}bg-info{% elif consultation.status == 'completed' %}bg-success{% else %}bg-secondary{% endif %}">
+                                            {{ consultation.get_status_display }}
+                                        </span>
+                                        {% if consultation.tpa_recommended %}
+                                            <span class="badge bg-danger ms-2">tPA Recommended</span>
+                                        {% endif %}
+                                    </h6>
+                                    <small>Requested: {{ consultation.requested_at|date:"M d, Y H:i" }}</small>
+                                </div>
+                                <p class="mb-1">{{ consultation.chief_complaint|truncatechars:100 }}</p>
+                                <small>
+                                    <strong>Requested by:</strong> {{ consultation.requested_by.get_full_name|default:consultation.requested_by.username }}
+                                    {% if consultation.neurologist %}
+                                        | <strong>Neurologist:</strong> {{ consultation.neurologist.get_full_name|default:consultation.neurologist.username }}
+                                    {% endif %}
+                                </small>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No consultations requested yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Alerts - Mobile Stroke Unit{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-bell me-2"></i>System Alerts</h2>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-light">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Active Alerts</h5>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if alerts %}
+            <div class="list-group">
+                {% for alert in alerts %}
+                    <div class="list-group-item {% if alert.priority == 'critical' %}list-group-item-danger{% elif alert.priority == 'high' %}list-group-item-warning{% endif %}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-1">
+                                <span class="badge {% if alert.priority == 'critical' %}bg-danger{% elif alert.priority == 'high' %}bg-warning{% elif alert.priority == 'medium' %}bg-info{% else %}bg-secondary{% endif %}">
+                                    {{ alert.get_priority_display }}
+                                </span>
+                                <span class="badge bg-dark ms-1">{{ alert.get_alert_type_display }}</span>
+                            </h6>
+                            <div>
+                                <small class="text-muted me-3">{{ alert.created_at|date:"M d, Y H:i" }}</small>
+                                <form method="POST" action="{% url 'alert_acknowledge' alert.pk %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Mark as Read">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        <p class="mb-1">{{ alert.message }}</p>
+                        <div class="mt-2">
+                            {% if alert.patient %}
+                                <a href="{% url 'patient_detail' alert.patient.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-user me-1"></i>Patient: {{ alert.patient.first_name }} {{ alert.patient.last_name }}
+                                </a>
+                            {% endif %}
+                            
+                            {% if alert.consultation %}
+                                <a href="{% url 'consultation_detail' alert.consultation.pk %}" class="btn btn-sm btn-outline-info ms-1">
+                                    <i class="fas fa-stethoscope me-1"></i>View Consultation
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center p-4">
+                <p class="mb-0"><i class="fas fa-check-circle text-success me-2"></i>No active alerts at this time.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,460 @@
+{% extends 'base.html' %}
+
+{% block title %}Consultation Details - Mobile Stroke Unit{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>
+            <i class="fas fa-stethoscope me-2"></i>Consultation
+            <span class="badge {% if consultation.status == 'requested' %}bg-warning{% elif consultation.status == 'in_progress' %}bg-info{% elif consultation.status == 'completed' %}bg-success{% else %}bg-secondary{% endif %}">
+                {{ consultation.get_status_display }}
+            </span>
+        </h2>
+        <p class="text-muted">Patient: {{ patient.first_name }} {{ patient.last_name }}, {{ patient.age }} years old</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        {% if consultation.status == 'requested' and user.profile.role == 'neurologist' %}
+            <a href="{% url 'consultation_accept' consultation.pk %}" class="btn btn-primary">
+                <i class="fas fa-check me-1"></i>Accept Consultation
+            </a>
+        {% elif consultation.status == 'in_progress' and consultation.neurologist == user %}
+            <a href="{% url 'consultation_complete' consultation.pk %}" class="btn btn-success">
+                <i class="fas fa-clipboard-check me-1"></i>Complete Consultation
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <!-- Consultation Details -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Consultation Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Status:</strong> {{ consultation.get_status_display }}
+                </div>
+                <div class="mb-3">
+                    <strong>Requested By:</strong> {{ consultation.requested_by.get_full_name|default:consultation.requested_by.username }}
+                </div>
+                <div class="mb-3">
+                    <strong>Requested At:</strong> {{ consultation.requested_at|date:"M d, Y H:i" }}
+                </div>
+                {% if consultation.neurologist %}
+                    <div class="mb-3">
+                        <strong>Neurologist:</strong> {{ consultation.neurologist.get_full_name|default:consultation.neurologist.username }}
+                    </div>
+                {% endif %}
+                {% if consultation.started_at %}
+                    <div class="mb-3">
+                        <strong>Started At:</strong> {{ consultation.started_at|date:"M d, Y H:i" }}
+                    </div>
+                {% endif %}
+                {% if consultation.completed_at %}
+                    <div class="mb-3">
+                        <strong>Completed At:</strong> {{ consultation.completed_at|date:"M d, Y H:i" }}
+                    </div>
+                {% endif %}
+                <hr>
+                <div>
+                    <strong>Chief Complaint:</strong>
+                    <p class="mt-2">{{ consultation.chief_complaint }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Patient Summary -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-user me-2"></i>Patient Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Name:</strong> {{ patient.first_name }} {{ patient.last_name }}
+                </div>
+                <div class="mb-3">
+                    <strong>Age:</strong> {{ patient.age }} years
+                </div>
+                <div class="mb-3">
+                    <strong>Gender:</strong> {{ patient.get_gender_display }}
+                </div>
+                {% if patient.medical_history %}
+                    <div>
+                        <strong>Medical History:</strong>
+                        <p class="mt-2">{{ patient.medical_history|linebreaks }}</p>
+                    </div>
+                {% endif %}
+                <hr>
+                <div class="text-center">
+                    <a href="{% url 'patient_detail' patient.pk %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-folder-open me-1"></i>View Full Patient Record
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- tPA Criteria -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header {% if meets_tpa_criteria %}bg-success{% else %}bg-danger{% endif %} text-white">
+                <h5 class="mb-0"><i class="fas fa-syringe me-2"></i>tPA Eligibility</h5>
+            </div>
+            <div class="card-body">
+                {% if meets_tpa_criteria %}
+                    <div class="alert alert-success mb-4">
+                        <i class="fas fa-check-circle me-2"></i>This patient meets criteria for tPA administration.
+                    </div>
+                {% else %}
+                    <div class="alert alert-danger mb-4">
+                        <i class="fas fa-exclamation-triangle me-2"></i>This patient does not meet criteria for tPA administration.
+                        {% if exclusion_reasons %}
+                            <ul class="mt-2 mb-0">
+                                {% for reason in exclusion_reasons %}
+                                    <li>{{ reason }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                {% endif %}
+                
+                {% if consultation.tpa_recommended %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>tPA administration recommended by neurologist.
+                    </div>
+                {% endif %}
+                
+                {% if consultation.tpa_administered %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-double me-2"></i>tPA administered at {{ consultation.tpa_time|date:"M d, Y H:i" }}
+                    </div>
+                {% endif %}
+                
+                {% if consultation.status == 'completed' %}
+                    <div class="mb-3">
+                        <strong>Diagnosis:</strong> {{ consultation.get_diagnosis_display }}
+                    </div>
+                    {% if consultation.other_recommendations %}
+                        <div>
+                            <strong>Recommendations:</strong>
+                            <p class="mt-2">{{ consultation.other_recommendations|linebreaks }}</p>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Patient Data Tabs -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-light p-0">
+        <ul class="nav nav-tabs" id="patientDataTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="vitals-tab" data-bs-toggle="tab" data-bs-target="#vitals" type="button" role="tab">
+                    <i class="fas fa-heartbeat me-1"></i>Vital Signs
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="labs-tab" data-bs-toggle="tab" data-bs-target="#labs" type="button" role="tab">
+                    <i class="fas fa-flask me-1"></i>Lab Results
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="imaging-tab" data-bs-toggle="tab" data-bs-target="#imaging" type="button" role="tab">
+                    <i class="fas fa-x-ray me-1"></i>Imaging
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="nihss-tab" data-bs-toggle="tab" data-bs-target="#nihss" type="button" role="tab">
+                    <i class="fas fa-clipboard-list me-1"></i>NIHSS
+                </button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body">
+        <div class="tab-content" id="patientDataTabsContent">
+            <!-- Vital Signs Tab -->
+            <div class="tab-pane fade show active" id="vitals" role="tabpanel" aria-labelledby="vitals-tab">
+                {% if latest_vitals %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Latest Vitals ({{ latest_vitals.timestamp|date:"M d, Y H:i" }})</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Blood Pressure:</th>
+                                    <td>{{ latest_vitals.systolic_bp }}/{{ latest_vitals.diastolic_bp }} mmHg</td>
+                                </tr>
+                                <tr>
+                                    <th>Heart Rate:</th>
+                                    <td>{{ latest_vitals.heart_rate }} bpm</td>
+                                </tr>
+                                <tr>
+                                    <th>Respiratory Rate:</th>
+                                    <td>{{ latest_vitals.respiratory_rate }} breaths/min</td>
+                                </tr>
+                                <tr>
+                                    <th>Temperature:</th>
+                                    <td>{{ latest_vitals.temperature }} °F</td>
+                                </tr>
+                                <tr>
+                                    <th>Oxygen Saturation:</th>
+                                    <td>{{ latest_vitals.oxygen_saturation }}%</td>
+                                </tr>
+                                {% if latest_vitals.glucose %}
+                                    <tr>
+                                        <th>Glucose:</th>
+                                        <td>{{ latest_vitals.glucose }} mg/dL</td>
+                                    </tr>
+                                {% endif %}
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <canvas id="bpChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No vital signs recorded for this patient.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Lab Results Tab -->
+            <div class="tab-pane fade" id="labs" role="tabpanel" aria-labelledby="labs-tab">
+                {% if latest_labs %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Latest Lab Results ({{ latest_labs.timestamp|date:"M d, Y H:i" }})</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Complete Blood Count:</th>
+                                    <td>{{ latest_labs.cbc_normal|yesno:"Normal,Abnormal" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Basic Metabolic Panel:</th>
+                                    <td>{{ latest_labs.bmp_normal|yesno:"Normal,Abnormal" }}</td>
+                                </tr>
+                                {% if latest_labs.glucose_level %}
+                                    <tr>
+                                        <th>Glucose Level:</th>
+                                        <td>{{ latest_labs.glucose_level }} mg/dL</td>
+                                    </tr>
+                                {% endif %}
+                                <tr>
+                                    <th>Coagulation Studies:</th>
+                                    <td>{{ latest_labs.coagulation_normal|yesno:"Normal,Abnormal" }}</td>
+                                </tr>
+                                {% if latest_labs.inr_value %}
+                                    <tr>
+                                        <th>INR Value:</th>
+                                        <td>{{ latest_labs.inr_value }}</td>
+                                    </tr>
+                                {% endif %}
+                                {% if latest_labs.platelet_count %}
+                                    <tr>
+                                        <th>Platelet Count:</th>
+                                        <td>{{ latest_labs.platelet_count }}</td>
+                                    </tr>
+                                {% endif %}
+                            </table>
+                            {% if latest_labs.notes %}
+                                <div class="mt-3">
+                                    <h6>Notes:</h6>
+                                    <p>{{ latest_labs.notes }}</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No lab results recorded for this patient.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Imaging Tab -->
+            <div class="tab-pane fade" id="imaging" role="tabpanel" aria-labelledby="imaging-tab">
+                {% if latest_imaging %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Latest Imaging ({{ latest_imaging.timestamp|date:"M d, Y H:i" }})</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Study Type:</th>
+                                    <td>{{ latest_imaging.get_study_type_display }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Result:</th>
+                                    <td>
+                                        <span class="badge {% if latest_imaging.result == 'hemorrhagic' %}bg-danger{% elif latest_imaging.result == 'ischemic' %}bg-warning{% else %}bg-info{% endif %}">
+                                            {{ latest_imaging.get_result_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                            <div class="mt-3">
+                                <h6>Description:</h6>
+                                <p>{{ latest_imaging.description }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            {% if latest_imaging.image_file %}
+                                <img src="{{ latest_imaging.image_file.url }}" class="img-fluid" alt="Imaging study">
+                            {% else %}
+                                <div class="alert alert-info">No image file available.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No imaging studies recorded for this patient.</p>
+                {% endif %}
+            </div>
+            
+            <!-- NIHSS Tab -->
+            <div class="tab-pane fade" id="nihss" role="tabpanel" aria-labelledby="nihss-tab">
+                {% if latest_nihss %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>NIHSS Assessment ({{ latest_nihss.timestamp|date:"M d, Y H:i" }})</h6>
+                            <div class="text-center mb-4">
+                                <h1 class="display-4">{{ latest_nihss.total_score }}</h1>
+                                <p class="text-muted">Total NIHSS Score</p>
+                                
+                                <div class="progress mt-2" style="height: 30px;">
+                                    <div class="progress-bar {% if latest_nihss.total_score < 5 %}bg-success{% elif latest_nihss.total_score < 16 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ latest_nihss.total_score|floatformat:0 }}%;" 
+                                         aria-valuenow="{{ latest_nihss.total_score }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="42">
+                                        {{ latest_nihss.total_score }}
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between text-muted small">
+                                    <span>Minor<br/>(1-4)</span>
+                                    <span>Moderate<br/>(5-15)</span>
+                                    <span>Moderate to Severe<br/>(16-20)</span>
+                                    <span>Severe<br/>(21+)</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Level of Consciousness:</th>
+                                    <td>{{ latest_nihss.level_of_consciousness }}</td>
+                                </tr>
+                                <tr>
+                                    <th>LOC Questions:</th>
+                                    <td>{{ latest_nihss.loc_questions }}</td>
+                                </tr>
+                                <tr>
+                                    <th>LOC Commands:</th>
+                                    <td>{{ latest_nihss.loc_commands }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Best Gaze:</th>
+                                    <td>{{ latest_nihss.best_gaze }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Visual:</th>
+                                    <td>{{ latest_nihss.visual }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Facial Palsy:</th>
+                                    <td>{{ latest_nihss.facial_palsy }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Motor Arm Left/Right:</th>
+                                    <td>{{ latest_nihss.motor_arm_left }} / {{ latest_nihss.motor_arm_right }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Motor Leg Left/Right:</th>
+                                    <td>{{ latest_nihss.motor_leg_left }} / {{ latest_nihss.motor_leg_right }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Limb Ataxia:</th>
+                                    <td>{{ latest_nihss.limb_ataxia }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Sensory:</th>
+                                    <td>{{ latest_nihss.sensory }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Best Language:</th>
+                                    <td>{{ latest_nihss.best_language }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Dysarthria:</th>
+                                    <td>{{ latest_nihss.dysarthria }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Extinction/Inattention:</th>
+                                    <td>{{ latest_nihss.extinction_inattention }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    {% if latest_nihss.notes %}
+                        <div class="mt-3">
+                            <h6>Notes:</h6>
+                            <p>{{ latest_nihss.notes }}</p>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted">No NIHSS assessment recorded for this patient.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if consultation.status == 'completed' %}
+    <!-- Consultation Findings -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Consultation Findings</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Diagnosis</h6>
+                    <p>{{ consultation.get_diagnosis_display }}</p>
+                    
+                    <h6>tPA Recommendations</h6>
+                    <p>
+                        tPA Administration: 
+                        <strong>{{ consultation.tpa_recommended|yesno:"Recommended,Not Recommended" }}</strong>
+                    </p>
+                    {% if consultation.tpa_administered %}
+                        <p>
+                            tPA Administered: <strong>Yes</strong><br>
+                            Time: {{ consultation.tpa_time|date:"M d, Y H:i" }}
+                        </p>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    {% if consultation.other_recommendations %}
+                        <h6>Other Recommendations</h6>
+                        <p>{{ consultation.other_recommendations|linebreaks }}</p>
+                    {% endif %}
+                    
+                    {% if consultation.notes %}
+                        <h6>Notes</h6>
+                        <p>{{ consultation.notes|linebreaks }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% elif consultation.status == 'in_progress' and consultation.neurologist == user %}
+    <!-- Complete Consultation Form Link -->
+    <div class="text-center mt-4">
+        <a href="{% url 'consultation_complete' consultation.pk %}" class="btn btn-success btn-lg">
+            <i class="fas fa-clipboard-check me-2"></i>Complete Consultation and Enter Findings
+        </a>
+    </div>
+{% endif %}
+{% endblock %}

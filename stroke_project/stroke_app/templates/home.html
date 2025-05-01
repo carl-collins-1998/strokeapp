@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - Mobile Stroke Unit{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>
+            {% if user.is_authenticated %}
+                Welcome, {{ user.get_full_name|default:user.username }}!
+            {% else %}
+                Welcome to the Mobile Stroke Unit System
+            {% endif %}
+        </h2>
+    </div>
+</div>
+
+{% if user.is_authenticated %}
+    {% if role == 'technician' %}
+        <!-- Technician Dashboard -->
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-users me-2"></i>Recent Patients</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if patients %}
+                            <div class="list-group">
+                                {% for patient in patients %}
+                                    <a href="{% url 'patient_detail' patient.pk %}" class="list-group-item list-group-item-action">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h5 class="mb-1">{{ patient.first_name }} {{ patient.last_name }}</h5>
+                                            <small>{{ patient.created_at|date:"M d, Y" }}</small>
+                                        </div>
+                                        <p class="mb-1">{{ patient.age }} years old, {{ patient.get_gender_display }}</p>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-3">
+                                <a href="{% url 'patient_list' %}" class="btn btn-outline-primary">View All Patients</a>
+                                <a href="{% url 'patient_create' %}" class="btn btn-primary ms-2">Add New Patient</a>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No patients yet. <a href="{% url 'patient_create' %}">Add your first patient</a>.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Alerts</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if alerts %}
+                            <div class="list-group">
+                                {% for alert in alerts %}
+                                    <div class="list-group-item list-group-item-action">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <span class="badge bg-{{ alert.priority }}">{{ alert.get_priority_display }}</span>
+                                            <small>{{ alert.created_at|date:"M d, Y H:i" }}</small>
+                                        </div>
+                                        <p class="mb-1">{{ alert.message }}</p>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-3">
+                                <a href="{% url 'alert_list' %}" class="btn btn-outline-info">View All Alerts</a>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No active alerts.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% elif role == 'neurologist' %}
+        <!-- Neurologist Dashboard -->
+        <div class="row">
+            <div class="col">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-stethoscope me-2"></i>Pending Consultations</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if pending_consultations %}
+                            <div class="list-group">
+                                {% for consultation in pending_consultations %}
+                                    <a href="{% url 'consultation_detail' consultation.pk %}" class="list-group-item list-group-item-action">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h5 class="mb-1">{{ consultation.patient.first_name }} {{ consultation.patient.last_name }}</h5>
+                                            <span class="badge {% if consultation.status == 'requested' %}bg-warning{% else %}bg-info{% endif %}">
+                                                {{ consultation.get_status_display }}
+                                            </span>
+                                        </div>
+                                        <p class="mb-1">{{ consultation.chief_complaint|truncatechars:100 }}</p>
+                                        <small>Requested: {{ consultation.requested_at|date:"M d, Y H:i" }}</small>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-3">
+                                <a href="{% url 'consultation_list' %}" class="btn btn-outline-primary">View All Consultations</a>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No pending consultations.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% elif role == 'admin' %}
+        <!-- Admin Dashboard -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card text-white bg-primary mb-3 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-users me-2"></i>Patients</h5>
+                        <p class="card-text display-4">{{ total_patients }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-success mb-3 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-stethoscope me-2"></i>Consultations</h5>
+                        <p class="card-text display-4">{{ total_consultations }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-info mb-3 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="fas fa-user-check me-2"></i>Active Users</h5>
+                        <p class="card-text display-4">{{ active_users }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Administration</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'user_list' %}" class="btn btn-outline-primary">
+                                        <i class="fas fa-users-cog me-2"></i>Manage Users
+                                    </a>
+                                    <a href="{% url 'admin:index' %}" class="btn btn-outline-dark">
+                                        <i class="fas fa-toolbox me-2"></i>Django Admin
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'alert_list' %}" class="btn btn-outline-warning">
+                                        <i class="fas fa-bell me-2"></i>System Alerts
+                                        <span class="badge bg-warning text-dark">{{ alerts|length }}</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+    {% endif %}
+{% else %}
+    <!-- Welcome Screen for Non-authenticated Users -->
+    <div class="row align-items-center my-5">
+        <div class="col-lg-6">
+            <h1 class="display-4 fw-bold">Mobile Stroke Unit & Remote Neurologist Consultation System</h1>
+            <p class="lead">Improving patient outcomes through rapid assessment and treatment</p>
+            <hr class="my-4">
+            <p>This system enables mobile stroke technicians to collect patient data and consult with remote neurologists, facilitating quick and effective treatment decisions.</p>
+            <div class="mt-4">
+                <a href="{% url 'login' %}" class="btn btn-primary btn-lg me-3">
+                    <i class="fas fa-sign-in-alt me-2"></i>Login
+                </a>
+                <a href="{% url 'register' %}" class="btn btn-outline-primary btn-lg">
+                    <i class="fas fa-user-plus me-2"></i>Register
+                </a>
+            </div>
+        </div>
+        <div class="col-lg-6 text-center">
+            <img src="https://cdn.pixabay.com/photo/2017/08/05/11/16/medical-2582315_960_720.png" class="img-fluid" alt="Medical illustration" style="max-height: 400px;">
+        </div>
+        
+    </div>
+{% endif %}
+{% endblock %}
