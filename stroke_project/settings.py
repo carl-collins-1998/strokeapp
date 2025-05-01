@@ -14,7 +14,15 @@ SECRET_KEY = 'django-insecure-yoursecretkeyhere'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'strokeapp.onrender.com']
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://strokeapp.onrender.com',
+    'http://strokeapp.onrender.com',  # Include both HTTP and HTTPS
+    'http://localhost:8000',
+    'http://127.0.0.1:8000'
+]
+
 
 # Application definition
 INSTALLED_APPS = [
@@ -92,7 +100,10 @@ USE_L10N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
+# Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build', 'static')
 
 # Media files (user uploads)
 MEDIA_URL = '/'
